@@ -37,7 +37,7 @@ class PairsTradingStrategy:
         """
         end_date = self.end_date
         start_date = end_date - pd.Timedelta(days=self.lookback_days)
-        historical_data = download_data_yfinance(self.tickers, start_date, end_date)
+        historical_data = download_data_yfinance(self.tickers, start_date, end_date + pd.Timedelta(days=1))
         selected_columns = ["Date"] + [f"Close_{ticker}" for ticker in self.tickers]
         self.historical_data = process_yfinance_data(historical_data, self.tickers, selected_columns=selected_columns)
 
@@ -163,7 +163,6 @@ class PairsTradingStrategy:
 
         else:
             self.load_data()
-
         start_date = self.historical_data['Date'].iloc[0]
         
         if self.stop_loss_bool():
