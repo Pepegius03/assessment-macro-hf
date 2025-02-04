@@ -52,7 +52,7 @@ class PairsTradingStrategy:
         residuals = ols_results['residuals']
         mean_resid = np.mean(residuals)
         std_resid = np.std(residuals)
-        z_score = (residuals.iloc[-1] - mean_resid) / std_resid
+        z_score = (ols_results['today_residual'] - mean_resid) / std_resid
         return z_score
     
     def get_kelly_allocation(self, z_score: float) -> float:
@@ -170,13 +170,16 @@ class PairsTradingStrategy:
             self.execute_trade(z_score, columns=['Close_GC=F', 'Close_SI=F'])
             self.compute_value()
         else:
-        
-            ols_results = ols_regression(self.historical_data, "Close_GC=F", "Close_SI=F",
+            test, ols_results = engle_granger_cointegration_test(self.historical_data, "Close_GC=F", "Close_SI=F",
                                         start_date=start_date.strftime("%Y-%m-%d"),
                                         end_date=self.end_date.strftime("%Y-%m-%d"))
-            z_score = self.calculate_z_score(ols_results)
-            self.execute_trade(z_score, columns=['Close_GC=F', 'Close_SI=F'])
-            
+
+            if test:
+                z_score = self.calculate_z_score(ols_results)
+                self.execute_trade(z_score, columns=['Close_GC=F', 'Close_SI=F'])
+            else:
+                z_score = 0
+                self.execute_trade(z_score, columns=['Close_GC=F', 'Close_SI=F'])    
             self.compute_value()
         
 

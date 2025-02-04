@@ -141,20 +141,29 @@ def ols_regression(df: pd.DataFrame, x_col: str, y_col: str, start_date: date.da
 
     :return: Dictionary with alpha, beta, and residuals.
     """
+    df_with_today = df.copy()
+    if start_date and end_date:
+        df_with_today = filter_dataframe_by_date(df, start_date, end_date, exclusive=False)
+
     if start_date and end_date:
         df = filter_dataframe_by_date(df, start_date, end_date, exclusive=True)
     
     X = sm.add_constant(df[x_col])
     y = df[y_col]
     model = sm.OLS(y, X).fit()
+    
+    theoretical_y = model.params['const'] + model.params[x_col] * df_with_today[x_col]
+    today_residual = df_with_today[y_col].iloc[-1] - theoretical_y.iloc[-1]
+    
     return {
         'alpha': model.params['const'],
         'beta': model.params[x_col],
-        'residuals': model.resid
+        'residuals': model.resid,
+        'today_residual': today_residual
     }
 
 
-def engle_granger_cointegration_test(df: pd.DataFrame, x_col: str, y_col: str, start_date: date.date, end_date: date.date, p_threshold: float = 0.05) -> bool:
+def engle_granger_cointegration_test(df: pd.DataFrame, x_col: str, y_col: str, start_date: date.date, end_date: date.date, p_threshold: float = 0.2) -> bool:
     """
     Perform the Engle-Granger cointegration test for two price series.
 
@@ -167,7 +176,7 @@ def engle_granger_cointegration_test(df: pd.DataFrame, x_col: str, y_col: str, s
     models = ols_regression(df, x_col, y_col, start_date, end_date)
     test_result = adfuller(models['residuals'])
     
-    return test_result[1] < p_threshold
+    return test_result[1] < p_threshold, models
 
 
 
